@@ -25,16 +25,44 @@ abstract contract MorphoTargets is
        morpho_liquidate(_getActor(), 0, repaidShares, hex"");
     }
 
+    function morpho_supply_clamped_by_assets(uint256 assets) public {
+        morpho_supply(assets, 0, _getActor(), hex"");
+    }
+
+    function morpho_supply_clamped_by_shares(uint256 shares) public {
+        morpho_supply(0, shares, _getActor(), hex"");
+    }
+
     function morpho_supplyCollateral_clamped(uint256 assets) public {
         morpho_supplyCollateral(assets, _getActor(), hex"");
     }
 
-    function morpho_repay_clamped(uint256 assets) public {
+    function morpho_repay_clamped_by_assets(uint256 assets) public {
         morpho_repay(assets, 0, _getActor(), hex"");
     }
 
-    function morpho_supply_clamped(uint256 assets) public {
-        morpho_supply(assets, 0, _getActor(), hex"");
+    function morpho_repay_clamped_by_shares(uint256 shares) public {
+        morpho_repay(0, shares, _getActor(), hex"");
+    }
+
+    function morpho_borrow_clamped_by_assets(uint256 assets) public asActor {
+        morpho_borrow(assets, 0, _getActor(), _getActor());
+    }
+
+    function morpho_borrow_clamped_by_shares(uint256 shares) public asActor {
+        morpho_borrow(0, shares, _getActor(), _getActor());
+    }
+
+    function morpho_withdraw_clamped_by_assets(uint256 assets) public asActor {
+        morpho_withdraw(assets, 0, _getActor(), _getActor());
+    }
+
+    function morpho_withdraw_clamped_by_shares(uint256 shares) public asActor {
+        morpho_withdraw(0, shares, _getActor(), _getActor());
+    }
+
+    function morpho_withdrawCollateral_clamped(uint256 assets) public asActor {
+        morpho_withdrawCollateral(assets, _getActor(), _getActor());
     }
 
     /// AUTO GENERATED TARGET FUNCTIONS - WARNING: DO NOT DELETE OR MODIFY THIS LINE ///

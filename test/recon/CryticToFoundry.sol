@@ -20,7 +20,7 @@ contract CryticToFoundry is Test, TargetFunctions, FoundryAsserts {
     // forge test --match-test test_crytic -vvv
     function test_crytic() public {
         // testing supplying assets to a market as the default actor (address(this))
-        morpho_supply_clamped(1e18);
+        morpho_supply_clamped_by_assets(1e18);
         morpho_supplyCollateral_clamped(1e18);
         oracle_setPrice(1e30);
         morpho_borrow(1e6, 0, _getActor(), _getActor());
