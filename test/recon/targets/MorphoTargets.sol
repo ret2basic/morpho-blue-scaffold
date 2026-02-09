@@ -17,7 +17,25 @@ abstract contract MorphoTargets is
     Properties
 {
     /// CUSTOM TARGET FUNCTIONS - Add your own target functions here ///
+    function morpho_liquidate_clamped_by_assets(uint256 seizedAssets) public asActor {
+       morpho_liquidate(_getActor(), seizedAssets, 0, hex"");
+    }
 
+    function morpho_liquidate_clamped_by_shares(uint256 repaidShares) public asActor {
+       morpho_liquidate(_getActor(), 0, repaidShares, hex"");
+    }
+
+    function morpho_supplyCollateral_clamped(uint256 assets) public {
+        morpho_supplyCollateral(assets, _getActor(), hex"");
+    }
+
+    function morpho_repay_clamped(uint256 assets) public {
+        morpho_repay(assets, 0, _getActor(), hex"");
+    }
+
+    function morpho_supply_clamped(uint256 assets) public {
+        morpho_supply(assets, 0, _getActor(), hex"");
+    }
 
     /// AUTO GENERATED TARGET FUNCTIONS - WARNING: DO NOT DELETE OR MODIFY THIS LINE ///
 
@@ -52,7 +70,7 @@ abstract contract MorphoTargets is
     function morpho_repay(uint256 assets, uint256 shares, address onBehalf, bytes memory data) public asActor {
         morpho.repay(marketParams, assets, shares, onBehalf, data);
     }
-
+    
     function morpho_setAuthorization(address authorized, bool newIsAuthorized) public asActor {
         morpho.setAuthorization(authorized, newIsAuthorized);
     }
@@ -77,16 +95,8 @@ abstract contract MorphoTargets is
         morpho.supply(marketParams, assets, shares, onBehalf, data);
     }
 
-    function morpho_supply_clamped(uint256 assets) public {
-        morpho_supply(assets, 0, _getActor(), hex"");
-    }
-
     function morpho_supplyCollateral(uint256 assets, address onBehalf, bytes memory data) public asActor {
         morpho.supplyCollateral(marketParams, assets, onBehalf, data);
-    }
-
-    function morpho_supplyCollateral_clamped(uint256 assets) public {
-        morpho_supplyCollateral(assets, _getActor(), hex"");
     }
 
     function morpho_withdraw(uint256 assets, uint256 shares, address onBehalf, address receiver) public asActor {

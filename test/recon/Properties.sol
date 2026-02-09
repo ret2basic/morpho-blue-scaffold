@@ -5,5 +5,5 @@ import {Asserts} from "@chimera/Asserts.sol";
 import {BeforeAfter} from "./BeforeAfter.sol";
 
 abstract contract Properties is BeforeAfter, Asserts {
-
+    
 }
