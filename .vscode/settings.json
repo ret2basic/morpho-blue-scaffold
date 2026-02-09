@@ -1,0 +1,6 @@
+{
+    "recon.defaultFuzzer": "Medusa",
+    "coverage-gutters.manualCoverageFilePaths": [
+        "/home/ret2basic/morpho-blue-scaffold/medusa/coverage/lcov.info"
+    ]
+}
