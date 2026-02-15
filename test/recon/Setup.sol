@@ -18,16 +18,24 @@ import "src/mocks/MockIRM.sol";
 import "src/mocks/OracleMock.sol";
 import "@recon/MockERC20.sol";
 import {FlashLoanReceiver} from "./FlashLoanReceiver.sol";
+import {MarketParamsLib} from "src/libraries/MarketParamsLib.sol";
 
 abstract contract Setup is BaseSetup, ActorManager, AssetManager, Utils {
+    using MarketParamsLib for MarketParams;
+
     Morpho morpho;
 
     // Mocks
     MockIRM irm;
     OracleMock oracle;
     FlashLoanReceiver flashLoanReceiver;
-     // This is an optimization to avoid having to pass the whole struct as argument in target functions
+
+    // This is an optimization to avoid having to pass the whole struct as argument in target functions
     MarketParams marketParams;
+
+    // Market tracking for MarketManager
+    Id[] internal _createdMarketIds;
+    MarketParams[] internal _createdMarkets;
 
     /// === Setup === ///
     /// This contains all calls to be performed in the tester constructor, both for Echidna and Foundry
@@ -43,9 +51,22 @@ abstract contract Setup is BaseSetup, ActorManager, AssetManager, Utils {
         _newAsset(18); // collateral token
         _newAsset(18); // loan token
 
-        // Create the market 
+        // Enable IRM and LLTV
         morpho.enableIrm(address(irm));
-        morpho.enableLltv(8e17); // 80% liquiditation loan-to-value
+        morpho.enableLltv(8e17); // 80% liquidation loan-to-value
+
+        // Create and track the default market
+        address[] memory assets = _getAssets();
+        marketParams = MarketParams({
+            loanToken: assets[1],
+            collateralToken: assets[0],
+            oracle: address(oracle),
+            irm: address(irm),
+            lltv: 8e17
+        });
+        morpho.createMarket(marketParams);
+        _createdMarkets.push(marketParams);
+        _createdMarketIds.push(marketParams.id());
 
         // Mint the tokens we're using in the system to our actors and
         // approve the Morpho contract to spend them

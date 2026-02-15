@@ -12,12 +12,14 @@ import {Panic} from "@recon/Panic.sol";
 import { AdminTargets } from "./targets/AdminTargets.sol";
 import { DoomsdayTargets } from "./targets/DoomsdayTargets.sol";
 import { ManagersTargets } from "./targets/ManagersTargets.sol";
+import { MarketManagerTargets } from "./targets/MarketManagerTargets.sol";
 import { MorphoTargets } from "./targets/MorphoTargets.sol";
 
 abstract contract TargetFunctions is
     AdminTargets,
     DoomsdayTargets,
     ManagersTargets,
+    MarketManagerTargets,
     MorphoTargets
 {
     /// CUSTOM TARGET FUNCTIONS - Add your own target functions here ///
