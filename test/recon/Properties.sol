@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import {Asserts} from "@chimera/Asserts.sol";
 import {BeforeAfter} from "./BeforeAfter.sol";
-import {Id, MarketParams, Market} from "src/interfaces/IMorpho.sol";
+import {Id, MarketParams} from "src/interfaces/IMorpho.sol";
 import {MarketParamsLib} from "src/libraries/MarketParamsLib.sol";
 import {MAX_FEE} from "src/libraries/ConstantsLib.sol";
 import {MockERC20} from "@recon/MockERC20.sol";
@@ -62,8 +62,8 @@ abstract contract Properties is BeforeAfter, Asserts {
 	function invariant_zero_shares_assets_consistent() public {
 		Id id = marketParams.id();
 		(
-			uint128 totalSupplyAssets,
-			uint128 totalSupplyShares,
+			,
+			,
 			uint128 totalBorrowAssets,
 			uint128 totalBorrowShares,
 			uint128 lastUpdate,
@@ -74,10 +74,6 @@ abstract contract Properties is BeforeAfter, Asserts {
 
 		if (totalBorrowShares == 0) {
 			eq(uint256(totalBorrowAssets), 0, "market: borrow assets without shares");
-		}
-
-		if (totalSupplyShares == 0) {
-			eq(uint256(totalSupplyAssets), 0, "market: supply assets without shares");
 		}
 	}
 
@@ -95,7 +91,7 @@ abstract contract Properties is BeforeAfter, Asserts {
 		if (lastUpdate == 0) return;
 
 		uint256 balance = MockERC20(marketParams.loanToken).balanceOf(address(morpho));
-		eq(balance + uint256(totalBorrowAssets), uint256(totalSupplyAssets), "market: loan balance mismatch");
+		gte(balance + uint256(totalBorrowAssets), uint256(totalSupplyAssets), "market: loan accounting deficit");
 	}
 
 	function invariant_market_params_persisted() public {

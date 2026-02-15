@@ -17,6 +17,7 @@ import "src/Morpho.sol";
 import "src/mocks/MockIRM.sol";
 import "src/mocks/OracleMock.sol";
 import "@recon/MockERC20.sol";
+import {FlashLoanReceiver} from "./FlashLoanReceiver.sol";
 
 abstract contract Setup is BaseSetup, ActorManager, AssetManager, Utils {
     Morpho morpho;
@@ -24,6 +25,7 @@ abstract contract Setup is BaseSetup, ActorManager, AssetManager, Utils {
     // Mocks
     MockIRM irm;
     OracleMock oracle;
+    FlashLoanReceiver flashLoanReceiver;
      // This is an optimization to avoid having to pass the whole struct as argument in target functions
     MarketParams marketParams;
 
@@ -35,6 +37,7 @@ abstract contract Setup is BaseSetup, ActorManager, AssetManager, Utils {
         // Deploy Mocks
         irm = new MockIRM();
         oracle = new OracleMock();
+        flashLoanReceiver = new FlashLoanReceiver();
         
         // Deploy assets
         _newAsset(18); // collateral token
@@ -47,17 +50,6 @@ abstract contract Setup is BaseSetup, ActorManager, AssetManager, Utils {
         // Mint the tokens we're using in the system to our actors and
         // approve the Morpho contract to spend them
         _setupAssetsAndApprovals();
-
-        address[] memory assets = _getAssets();
-        // Hardcode market params for now, but can be made dynamic if needed
-        marketParams = MarketParams({
-            loanToken: assets[1],
-            collateralToken: assets[0],
-            oracle: address(oracle),
-            irm: address(irm),
-            lltv: 8e17
-        });
-        morpho.createMarket(marketParams);
     }
 
     function _setupAssetsAndApprovals() internal {

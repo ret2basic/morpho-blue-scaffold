@@ -9,6 +9,7 @@ import {vm} from "@chimera/Hevm.sol";
 
 // Helpers
 import {Panic} from "@recon/Panic.sol";
+import {MockERC20} from "@recon/MockERC20.sol";
 
 import "src/Morpho.sol";
 
@@ -17,11 +18,11 @@ abstract contract MorphoTargets is
     Properties
 {
     /// CUSTOM TARGET FUNCTIONS - Add your own target functions here ///
-    function morpho_liquidate_clamped_by_assets(uint256 seizedAssets) public asActor {
+     function morpho_liquidate_clamped_by_assets(uint256 seizedAssets) public {
        morpho_liquidate(_getActor(), seizedAssets, 0, hex"");
     }
 
-    function morpho_liquidate_clamped_by_shares(uint256 repaidShares) public asActor {
+     function morpho_liquidate_clamped_by_shares(uint256 repaidShares) public {
        morpho_liquidate(_getActor(), 0, repaidShares, hex"");
     }
 
@@ -45,24 +46,70 @@ abstract contract MorphoTargets is
         morpho_repay(0, shares, _getActor(), hex"");
     }
 
-    function morpho_borrow_clamped_by_assets(uint256 assets) public asActor {
+    function morpho_borrow_clamped_by_assets(uint256 assets) public {
         morpho_borrow(assets, 0, _getActor(), _getActor());
     }
 
-    function morpho_borrow_clamped_by_shares(uint256 shares) public asActor {
+    function morpho_borrow_clamped_by_shares(uint256 shares) public {
         morpho_borrow(0, shares, _getActor(), _getActor());
     }
 
-    function morpho_withdraw_clamped_by_assets(uint256 assets) public asActor {
+    function morpho_withdraw_clamped_by_assets(uint256 assets) public {
         morpho_withdraw(assets, 0, _getActor(), _getActor());
     }
 
-    function morpho_withdraw_clamped_by_shares(uint256 shares) public asActor {
+    function morpho_withdraw_clamped_by_shares(uint256 shares) public {
         morpho_withdraw(0, shares, _getActor(), _getActor());
     }
 
-    function morpho_withdrawCollateral_clamped(uint256 assets) public asActor {
+    function morpho_withdrawCollateral_clamped(uint256 assets) public {
         morpho_withdrawCollateral(assets, _getActor(), _getActor());
+    }
+
+    function morpho_flashLoan_clamped(uint256 assets) public {
+        uint256 balance = MockERC20(marketParams.loanToken).balanceOf(address(morpho));
+        if (balance == 0) return;
+
+        uint256 clamped = assets % (balance + 1);
+        flashLoanReceiver.executeFlashLoan(morpho, marketParams.loanToken, clamped);
+    }
+
+    function morpho_createMarket_clamped(uint8 index, uint256 lltv) public {
+        address[] memory assets = _getAssets();
+        address loanToken = assets[index % assets.length];
+        address collateralToken = assets[(index + 1) % assets.length];
+
+        uint256[9] memory approvedLltvs = [
+            uint256(0),
+            385000000000000000,
+            625000000000000000,
+            770000000000000000,
+            860000000000000000,
+            915000000000000000,
+            945000000000000000,
+            965000000000000000,
+            980000000000000000
+        ];
+        uint256 clampedLltv = approvedLltvs[lltv % approvedLltvs.length];
+
+        if (!morpho.isLltvEnabled(clampedLltv) && morpho.owner() == address(this)) {
+            vm.prank(address(this));
+            morpho.enableLltv(clampedLltv);
+        }
+
+        marketParams = MarketParams({
+            loanToken: loanToken,
+            collateralToken: collateralToken,
+            oracle: address(oracle),
+            irm: address(irm),
+            lltv: clampedLltv
+        });
+
+        morpho_createMarket(marketParams);
+    }
+
+    function morpho_createMarket(MarketParams memory _marketParams) public asActor {
+        morpho.createMarket(_marketParams);
     }
 
     /// AUTO GENERATED TARGET FUNCTIONS - WARNING: DO NOT DELETE OR MODIFY THIS LINE ///
