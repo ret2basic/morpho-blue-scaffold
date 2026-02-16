@@ -3,13 +3,19 @@ pragma solidity ^0.8.0;
 
 import {Asserts} from "@chimera/Asserts.sol";
 import {BeforeAfter} from "./BeforeAfter.sol";
-import {Id, MarketParams} from "src/interfaces/IMorpho.sol";
+import {IMorpho, Id, MarketParams} from "src/interfaces/IMorpho.sol";
 import {MarketParamsLib} from "src/libraries/MarketParamsLib.sol";
 import {MAX_FEE} from "src/libraries/ConstantsLib.sol";
+import {ORACLE_PRICE_SCALE} from "src/libraries/ConstantsLib.sol";
+import {MathLib} from "src/libraries/MathLib.sol";
+import {MorphoBalancesLib} from "src/libraries/periphery/MorphoBalancesLib.sol";
+import {IOracle} from "src/interfaces/IOracle.sol";
 import {MockERC20} from "@recon/MockERC20.sol";
 
 abstract contract Properties is BeforeAfter, Asserts {
 	using MarketParamsLib for MarketParams;
+	using MathLib for uint256;
+	using MorphoBalancesLib for IMorpho;
 
 	// ============================================================
 	//                     GLOBAL PROPERTIES
@@ -166,6 +172,101 @@ abstract contract Properties is BeforeAfter, Asserts {
 
 		uint256 balance = MockERC20(marketParams.collateralToken).balanceOf(address(morpho));
 		gte(balance, sumCollateral, "market: collateral token balance deficit");
+	}
+
+	/// @dev Exact share accounting across all tracked markets and actors (including fee recipient)
+	function invariant_supply_shares_equal_total_all_markets() public {
+		address[] memory actors = _getActors();
+
+		for (uint256 m = 0; m < _createdMarkets.length; m++) {
+			MarketParams memory mp = _createdMarkets[m];
+			Id id = mp.id();
+
+			(, uint128 totalSupplyShares,,, uint128 lastUpdate,) = morpho.market(id);
+			if (lastUpdate == 0) continue;
+
+			uint256 sumSupplyShares;
+			for (uint256 i = 0; i < actors.length; i++) {
+				(uint256 ss,,) = morpho.position(id, actors[i]);
+				sumSupplyShares += ss;
+			}
+
+			address feeRecipient = morpho.feeRecipient();
+			if (feeRecipient != address(0)) {
+				(uint256 feeRecipientShares,,) = morpho.position(id, feeRecipient);
+				sumSupplyShares += feeRecipientShares;
+			}
+
+			eq(sumSupplyShares, uint256(totalSupplyShares), "market: sum of supply shares mismatch");
+		}
+	}
+
+	/// @dev Exact borrow shares accounting across all tracked markets and actors
+	function invariant_borrow_shares_equal_total_all_markets() public {
+		address[] memory actors = _getActors();
+
+		for (uint256 m = 0; m < _createdMarkets.length; m++) {
+			MarketParams memory mp = _createdMarkets[m];
+			Id id = mp.id();
+
+			(,,, uint128 totalBorrowShares, uint128 lastUpdate,) = morpho.market(id);
+			if (lastUpdate == 0) continue;
+
+			uint256 sumBorrowShares;
+			for (uint256 i = 0; i < actors.length; i++) {
+				(, uint128 bs,) = morpho.position(id, actors[i]);
+				sumBorrowShares += uint256(bs);
+			}
+
+			eq(sumBorrowShares, uint256(totalBorrowShares), "market: sum of borrow shares mismatch");
+		}
+	}
+
+	/// @dev Bad-debt guard: tracked users with zero collateral must have zero borrow shares (all markets)
+	function invariant_bad_debt_no_borrow_without_collateral_all_markets() public {
+		address[] memory actors = _getActors();
+
+		for (uint256 m = 0; m < _createdMarkets.length; m++) {
+			MarketParams memory mp = _createdMarkets[m];
+			Id id = mp.id();
+
+			(,,,, uint128 lastUpdate,) = morpho.market(id);
+			if (lastUpdate == 0) continue;
+
+			for (uint256 i = 0; i < actors.length; i++) {
+				(, uint128 borrowShares, uint128 collateral) = morpho.position(id, actors[i]);
+				if (collateral == 0) {
+					eq(uint256(borrowShares), 0, "market: borrow shares without collateral");
+				}
+			}
+		}
+	}
+
+	/// @dev Static-style health check under baseline oracle price only, across all markets and actors
+	function invariant_healthy_positions_at_baseline_price_all_markets() public {
+		address[] memory actors = _getActors();
+
+		for (uint256 m = 0; m < _createdMarkets.length; m++) {
+			MarketParams memory mp = _createdMarkets[m];
+			Id id = mp.id();
+
+			(,,,, uint128 lastUpdate,) = morpho.market(id);
+			if (lastUpdate == 0) continue;
+
+			uint256 price = IOracle(mp.oracle).price();
+			if (price != ORACLE_PRICE_SCALE) continue;
+
+			for (uint256 i = 0; i < actors.length; i++) {
+				address actor = actors[i];
+				(, uint128 borrowShares, uint128 collateral) = morpho.position(id, actor);
+				if (borrowShares == 0) continue;
+
+				uint256 maxBorrow = uint256(collateral).mulDivDown(price, ORACLE_PRICE_SCALE).wMulDown(mp.lltv);
+				uint256 borrowedAssets = MorphoBalancesLib.expectedBorrowAssets(IMorpho(address(morpho)), mp, actor);
+
+				gte(maxBorrow, borrowedAssets, "market: unhealthy position at baseline price");
+			}
+		}
 	}
 
 	// ============================================================
