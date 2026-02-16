@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 // Chimera deps
 import {vm} from "@chimera/Hevm.sol";
+import {ORACLE_PRICE_SCALE} from "src/libraries/ConstantsLib.sol";
 
 // Helpers
 import {Panic} from "@recon/Panic.sol";
@@ -24,6 +25,7 @@ abstract contract TargetFunctions is
 {
     /// CUSTOM TARGET FUNCTIONS - Add your own target functions here ///
     function oracle_setPrice(uint256 price) public {
+        if (price != ORACLE_PRICE_SCALE) _oracleEverNonBaseline = true;
         oracle.setPrice(price);
     }
 

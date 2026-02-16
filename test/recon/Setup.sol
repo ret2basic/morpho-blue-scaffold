@@ -37,6 +37,10 @@ abstract contract Setup is BaseSetup, ActorManager, AssetManager, Utils {
     Id[] internal _createdMarketIds;
     MarketParams[] internal _createdMarkets;
 
+    // True once the oracle has ever been set to a non-baseline value.
+    // Used to gate baseline-only health properties and avoid false positives.
+    bool internal _oracleEverNonBaseline;
+
     /// === Setup === ///
     /// This contains all calls to be performed in the tester constructor, both for Echidna and Foundry
     function setup() internal virtual override {

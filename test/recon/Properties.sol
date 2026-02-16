@@ -186,13 +186,16 @@ abstract contract Properties is BeforeAfter, Asserts {
 			if (lastUpdate == 0) continue;
 
 			uint256 sumSupplyShares;
+			bool feeRecipientTracked;
 			for (uint256 i = 0; i < actors.length; i++) {
-				(uint256 ss,,) = morpho.position(id, actors[i]);
+				address actor = actors[i];
+				(uint256 ss,,) = morpho.position(id, actor);
 				sumSupplyShares += ss;
+				if (actor == morpho.feeRecipient()) feeRecipientTracked = true;
 			}
 
 			address feeRecipient = morpho.feeRecipient();
-			if (feeRecipient != address(0)) {
+			if (feeRecipient != address(0) && !feeRecipientTracked) {
 				(uint256 feeRecipientShares,,) = morpho.position(id, feeRecipient);
 				sumSupplyShares += feeRecipientShares;
 			}
@@ -244,6 +247,8 @@ abstract contract Properties is BeforeAfter, Asserts {
 
 	/// @dev Static-style health check under baseline oracle price only, across all markets and actors
 	function invariant_healthy_positions_at_baseline_price_all_markets() public {
+		if (_oracleEverNonBaseline) return;
+
 		address[] memory actors = _getActors();
 
 		for (uint256 m = 0; m < _createdMarkets.length; m++) {
